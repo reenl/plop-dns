@@ -1,0 +1,75 @@
+[
+  {
+    "Id": "one",
+    "Labels": {
+      "com.docker.compose.project": "demo01",
+      "com.docker.compose.service": "web",
+      "com.docker.compose.container-number": "1",
+      "dns": "special.docker",
+      "dns.default": "TrUe"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "compose-discovery": {
+          "IPAddress": "172.30.53.10"
+        },
+        "aaa-extra": {
+          "IPAddress": "192.0.2.100",
+          "GlobalIPv6Address": "fd00::100"
+        }
+      }
+    },
+    "HostConfig": {
+      "NetworkMode": "compose-discovery"
+    }
+  },
+  {
+    "Id": "three",
+    "Labels": {
+      "com.docker.compose.project": "demo01",
+      "com.docker.compose.service": "web",
+      "com.docker.compose.container-number": "3"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "compose-discovery": {
+          "IPAddress": "172.30.53.12",
+          "GlobalIPv6Address": "fd00::12"
+        }
+      }
+    }
+  },
+  {
+    "Id": "other-network",
+    "Labels": {
+      "com.docker.compose.project": "demo02",
+      "com.docker.compose.service": "web",
+      "com.docker.compose.container-number": "1",
+      "dns": "special",
+      "dns.default": "false"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "another-network": {
+          "IPAddress": "172.31.0.5"
+        }
+      }
+    }
+  },
+  {
+    "Id": "oneoff",
+    "Labels": {
+      "com.docker.compose.project": "demo01",
+      "com.docker.compose.service": "client",
+      "com.docker.compose.container-number": "1",
+      "com.docker.compose.oneoff": "True"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "compose-discovery": {
+          "IPAddress": "172.30.53.20"
+        }
+      }
+    }
+  }
+]

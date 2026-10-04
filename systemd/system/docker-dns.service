@@ -1,0 +1,22 @@
+[Unit]
+Description=Docker Compose domain aliases
+After=docker.service systemd-resolved.service
+PartOf=docker.service systemd-resolved.service
+# No Requires/Wants/BindsTo=docker.service: DNS must not activate Docker.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecCondition=/usr/bin/systemctl is-active --quiet docker.service
+ExecStart=/usr/local/bin/docker-dns
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=docker.service

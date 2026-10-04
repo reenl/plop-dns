@@ -1,0 +1,17 @@
+[package]
+name = "docker-dns"
+version = "0.1.0"
+edition = "2021"
+description = "DNS records for local Docker Compose projects"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+bollard = { version = "0.21", default-features = false, features = ["pipe"] }
+futures-util = { version = "0.3", default-features = false, features = ["std", "async-await"] }
+hickory-proto = { version = "0.24.4", default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "process", "sync", "time", "signal"] }
+
+[profile.release]
+strip = true
+lto = "thin"
