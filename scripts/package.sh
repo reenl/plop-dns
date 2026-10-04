@@ -21,6 +21,7 @@ mkdir -p "$staging/$name/scripts" target/dist
 install -m 755 "$binary" "$staging/$name/docker-dns"
 install -m 755 scripts/install.sh scripts/uninstall.sh "$staging/$name/scripts/"
 cp -R systemd "$staging/$name/"
-cp README.md LICENSE "$staging/$name/"
+cp -R docs "$staging/$name/"
+cp README.md CONTRIBUTING.md LICENSE "$staging/$name/"
 tar -czf "target/dist/$name.tar.gz" -C "$staging" "$name"
 echo "target/dist/$name.tar.gz"
