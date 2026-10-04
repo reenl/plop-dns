@@ -59,14 +59,12 @@ GitHub Releases page. No Rust installation is needed. For example, on x86_64:
 sha256sum --ignore-missing --check SHA256SUMS
 tar -xzf plop-dns-0.1.0-linux-x86_64.tar.gz
 cd plop-dns-0.1.0-linux-x86_64
-./scripts/install.sh
+./install.sh
 ```
 
 On ARM64, use `plop-dns-0.1.0-linux-aarch64.tar.gz`. Keep the extracted directory
 to run uninstall later. To upgrade, extract the new release and run its installer.
 Installation leaves inactive Docker asleep; DNS starts when Docker starts normally.
-If upgrading from `docker-dns`, the installer removes its old service and binary
-before starting `plop-dns`. Existing `.docker` names and labels keep working.
 
 ### From source
 
@@ -114,9 +112,13 @@ separate from plop-dns; its installer and uninstaller do not change them.
 
 ### Uninstall
 
+From the extracted release directory:
+
 ```bash
-./scripts/uninstall.sh
+./uninstall.sh
 ```
+
+For a source checkout, use `./scripts/uninstall.sh`.
 
 This stops and disables the service, removes its binary and DNS delegation, then
 reloads resolved. Docker containers, networks, and existing host DNS settings stay

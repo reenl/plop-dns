@@ -17,9 +17,9 @@ version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml)
 name="plop-dns-$version-linux-$architecture"
 staging=$(mktemp -d)
 trap 'rm -rf -- "$staging"' EXIT
-mkdir -p "$staging/$name/scripts" target/dist
+mkdir -p "$staging/$name" target/dist
 install -m 755 "$binary" "$staging/$name/plop-dns"
-install -m 755 scripts/install.sh scripts/uninstall.sh "$staging/$name/scripts/"
+install -m 755 scripts/install.sh scripts/uninstall.sh "$staging/$name/"
 cp LICENSE "$staging/$name/"
 cargo about generate --locked --fail --target "$target" \
   -o "$staging/$name/THIRD-PARTY-LICENSES.txt" about.hbs

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 binary=./plop-dns
 if [[ ! -x "$binary" ]]; then
-  binary=target/release/plop-dns
+  binary=../target/release/plop-dns
 fi
 test -x "$binary" || { echo 'Extract a release archive or run cargo build --release --locked first.' >&2; exit 1; }
 systemd_version=$(systemctl --version | sed -n '1s/^systemd \([0-9]*\).*/\1/p')

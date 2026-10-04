@@ -46,11 +46,14 @@ cargo build --release --locked --target x86_64-unknown-linux-musl
 ```
 
 This requires the target's Rust standard library and a suitable musl linker.
+On Arch Linux with the distribution's Rust package, install the target with
+`sudo pacman -S rust-musl`. With rustup, use
+`rustup target add x86_64-unknown-linux-musl`.
 Packaging defaults to the current machine's architecture (`uname -m`), or accepts
 `x86_64` or `aarch64` as an argument. Archives are written under `target/dist/`. The ARM64 target is
 `aarch64-unknown-linux-musl`; package it with `./scripts/package.sh aarch64`.
-Each architecture's archive contains only its binary, `scripts/install.sh`,
-`scripts/uninstall.sh`, `LICENSE`, and `THIRD-PARTY-LICENSES.txt`. The installer
+Each architecture's archive contains only its binary, `install.sh`,
+`uninstall.sh`, `LICENSE`, and `THIRD-PARTY-LICENSES.txt` in the same directory. The installer
 embeds the systemd service and DNS delegation configuration. Documentation stays
 in the repository.
 
