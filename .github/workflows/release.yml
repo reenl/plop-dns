@@ -3,7 +3,7 @@ name: Build and release
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['[0-9]*']
   pull_request:
   workflow_dispatch:
 
@@ -39,7 +39,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml)
-          test "$GITHUB_REF_NAME" = "v$version"
+          test "$GITHUB_REF_NAME" = "$version"
       - name: Check and test
         env:
           TARGET: ${{ matrix.target }}
@@ -57,7 +57,7 @@ jobs:
             echo 'Release binary must be static.' >&2
             exit 1
           fi
-          ./scripts/package.sh "$TARGET"
+          ./scripts/package.sh "${TARGET%%-*}"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
