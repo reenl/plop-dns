@@ -1,4 +1,4 @@
-# docker-dns
+# plop-dns
 
 Automatically create DNS records for your Docker Compose containers so you can
 reach them without publishing ports when using Linux bridge networking. Run the
@@ -57,14 +57,16 @@ GitHub Releases page. No Rust installation is needed. For example, on x86_64:
 
 ```bash
 sha256sum --ignore-missing --check SHA256SUMS
-tar -xzf docker-dns-0.1.0-linux-x86_64.tar.gz
-cd docker-dns-0.1.0-linux-x86_64
+tar -xzf plop-dns-0.1.0-linux-x86_64.tar.gz
+cd plop-dns-0.1.0-linux-x86_64
 ./scripts/install.sh
 ```
 
-On ARM64, use `docker-dns-0.1.0-linux-aarch64.tar.gz`. Keep the extracted directory
+On ARM64, use `plop-dns-0.1.0-linux-aarch64.tar.gz`. Keep the extracted directory
 to run uninstall later. To upgrade, extract the new release and run its installer.
 Installation leaves inactive Docker asleep; DNS starts when Docker starts normally.
+If upgrading from `docker-dns`, the installer removes its old service and binary
+before starting `plop-dns`. Existing `.docker` names and labels keep working.
 
 ### From source
 
@@ -108,7 +110,7 @@ sudo systemctl restart systemd-resolved.service
 
 Restarting Docker may interrupt running containers. Allow UDP/TCP port 53 from
 containers to that host address in your firewall. These host-wide settings are
-separate from docker-dns; its installer and uninstaller do not change them.
+separate from plop-dns; its installer and uninstaller do not change them.
 
 ### Uninstall
 
@@ -193,8 +195,8 @@ For an external network, set the label where that network is created.
 ```bash
 resolvectl query web.myproject.docker
 dig @127.0.0.1 -p 5354 web.myproject.docker
-systemctl status docker-dns.service
-journalctl -u docker-dns.service -n 50 --no-pager
+systemctl status plop-dns.service
+journalctl -u plop-dns.service -n 50 --no-pager
 ```
 
 In Alpine, install [bind-tools](https://pkgs.alpinelinux.org/contents?arch=x86_64&branch=edge&name=bind-tools&repo=main)
@@ -228,18 +230,18 @@ The daemon runs as a native systemd service. Resolved routes `.docker` queries t
 it through a DNS delegation file:
 
 ```text
-host      -> resolved -> .docker -> docker-dns
-container -> Docker DNS -> resolved -> .docker -> docker-dns
+host      -> resolved -> .docker -> plop-dns
+container -> Docker DNS -> resolved -> .docker -> plop-dns
 ```
 
 The listener is fixed at `127.0.0.1:5354`, and the zone is `.docker`. The daemon
 answers only for this zone; resolved handles ordinary DNS through existing
-upstreams. There is no upstream resolver or forwarding in docker-dns.
+upstreams. There is no upstream resolver or forwarding in plop-dns.
 
 Repository configuration paths mirror their destinations under `/etc`:
 
 ```text
-systemd/system/docker-dns.service
+systemd/system/plop-dns.service
 systemd/dns-delegate.d/30-docker-domains.dns-delegate
 ```
 
@@ -286,14 +288,14 @@ ultimately uses.
 networks. It lets containers on a shared network find a service as `nginx`, but
 does not give the host a directory of all Compose projects.
 
-docker-dns adds names that distinguish those projects and work from the host:
+plop-dns adds names that distinguish those projects and work from the host:
 
 ```text
 nginx.project1.docker:80
 nginx.project2.docker:80
 ```
 
-Docker's embedded DNS still handles names within shared networks. docker-dns
+Docker's embedded DNS still handles names within shared networks. plop-dns
 adds project-qualified names and custom aliases through resolved; it does not
 replace Docker's network-local discovery. Neither bypasses network isolation:
 resolving a name does not make the container's IP reachable.
@@ -306,7 +308,7 @@ resolving a name does not make the container's IP reachable.
 - **[Traefik](https://doc.traefik.io/traefik/v3.3/routing/routers/), Caddy, or nginx:** use a reverse proxy for HTTP hostname/path routing
   or TLS SNI routing through a shared IP and port. Plain TCP port routing does not
   distinguish arbitrary services by hostname on that same IP and port. A proxy
-  can be used alongside docker-dns, including to serve one HTTP origin for CORS.
+  can be used alongside plop-dns, including to serve one HTTP origin for CORS.
 - **Published Docker ports:** use them when services need to be reachable through
   host ports, including from other machines. Separate copies need distinct host
   ports or another routing arrangement.

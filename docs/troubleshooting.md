@@ -6,7 +6,7 @@ Docker CLI commands can activate an otherwise sleeping Docker daemon.
 
 ## Why is DNS switching between services?
 
-When several containers register the same name, docker-dns combines their
+When several containers register the same name, plop-dns combines their
 addresses and rotates the first answer between queries. This can happen when:
 
 - Several containers have the same `dns` alias, even in different projects.
@@ -35,11 +35,11 @@ address your client cannot reach.
 ### 1. Check the services
 
 ```bash
-systemctl status docker.service docker-dns.service systemd-resolved.service
-journalctl -u docker-dns.service -n 50 --no-pager
+systemctl status docker.service plop-dns.service systemd-resolved.service
+journalctl -u plop-dns.service -n 50 --no-pager
 ```
 
-docker-dns intentionally stays stopped when Docker is inactive. It does not start
+plop-dns intentionally stays stopped when Docker is inactive. It does not start
 Docker in response to a DNS request. Installation requires systemd 258 or newer,
 rootful Docker, and an active systemd-resolved service.
 
@@ -165,6 +165,6 @@ aliases: `dns: "app.${COMPOSE_PROJECT_NAME}.docker"`. See
 
 ## Why do lookups outside .docker fail when querying the daemon directly?
 
-docker-dns serves only `.docker` and refuses other zones. Query resolved or the
+plop-dns serves only `.docker` and refuses other zones. Query resolved or the
 container's normal DNS resolver for external names; those resolvers handle the
-existing upstream path. There is no fallback DNS server in docker-dns.
+existing upstream path. There is no fallback DNS server in plop-dns.

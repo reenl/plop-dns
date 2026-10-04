@@ -53,7 +53,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           cargo +stable build --release --locked --target "$TARGET"
-          if readelf -l "target/$TARGET/release/docker-dns" | grep -q INTERP; then
+          if readelf -l "target/$TARGET/release/plop-dns" | grep -q INTERP; then
             echo 'Release binary must be static.' >&2
             exit 1
           fi

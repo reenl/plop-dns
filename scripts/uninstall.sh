@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-sudo systemctl disable --now docker-dns.service
-sudo rm -f /etc/systemd/system/docker-dns.service /usr/local/bin/docker-dns
-sudo rm -f /etc/systemd/system/docker-dns.service.d/30-docker-domains.conf
+sudo systemctl disable --now plop-dns.service
+sudo rm -f /etc/systemd/system/plop-dns.service /usr/local/bin/plop-dns
 sudo systemctl daemon-reload
 if [[ -f /etc/systemd/dns-delegate.d/30-docker-domains.dns-delegate ]]; then
   sudo rm -f /etc/systemd/dns-delegate.d/30-docker-domains.dns-delegate

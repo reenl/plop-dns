@@ -8,7 +8,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 ExecCondition=/usr/bin/systemctl is-active --quiet docker.service
-ExecStart=/usr/local/bin/docker-dns
+ExecStart=/usr/local/bin/plop-dns
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true

@@ -54,7 +54,7 @@ async fn reply_snapshot(listener: &UnixListener, stream: &mut UnixStream) {
 // Both scenarios run sequentially because the binary uses a fixed DNS port.
 #[tokio::test]
 async fn discovery_does_not_activate_or_poll_idle_docker() {
-    let directory = std::env::temp_dir().join(format!("docker-dns-lazy-{}", std::process::id()));
+    let directory = std::env::temp_dir().join(format!("plop-dns-lazy-{}", std::process::id()));
     fs::create_dir(&directory).unwrap();
     let probe = directory.join("systemctl");
     fs::write(&probe, "#!/bin/sh\nexit 3\n").unwrap();
@@ -62,7 +62,7 @@ async fn discovery_does_not_activate_or_poll_idle_docker() {
     let socket = directory.join("docker.sock");
     let listener = UnixListener::bind(&socket).unwrap();
     let mut child = TestChild(
-        Command::new(env!("CARGO_BIN_EXE_docker-dns"))
+        Command::new(env!("CARGO_BIN_EXE_plop-dns"))
             .env("DOCKER_HOST", format!("unix://{}", socket.display()))
             .env("PATH", format!("{}:/usr/bin:/bin", directory.display()))
             .stdout(Stdio::null())
@@ -78,7 +78,7 @@ async fn discovery_does_not_activate_or_poll_idle_docker() {
 
     fs::write(&probe, "#!/bin/sh\nexit 0\n").unwrap();
     let child = TestChild(
-        Command::new(env!("CARGO_BIN_EXE_docker-dns"))
+        Command::new(env!("CARGO_BIN_EXE_plop-dns"))
             .env("DOCKER_HOST", format!("unix://{}", socket.display()))
             .env("PATH", format!("{}:/usr/bin:/bin", directory.display()))
             .stdout(Stdio::null())

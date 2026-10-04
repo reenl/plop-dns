@@ -42,7 +42,7 @@ Compose networks use the bridge driver; follow the [installation guide](../../RE
 to configure host and container DNS.
 
 You can omit `.docker` from the label: `dns: "app.${COMPOSE_PROJECT_NAME}"`
-registers the same alias because docker-dns appends the zone. Use project names
+registers the same alias because plop-dns appends the zone. Use project names
 without dots or underscores, such as `fix-42`.
 
 Replicas within one project still share its alias and round robin. To address a

@@ -47,7 +47,7 @@ The credentials here are development examples. Start the project:
 docker compose -f shared-services.compose.yaml -p shared-services up -d
 ```
 
-docker-dns registers these names automatically:
+plop-dns registers these names automatically:
 
 ```text
 mysql.shared-services.docker:3306

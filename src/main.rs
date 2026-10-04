@@ -618,7 +618,7 @@ mod tests {
     }
     #[tokio::test]
     async fn docker_snapshot_registers_all_projects_and_removes_stopped_containers() {
-        let path = format!("/tmp/docker-dns-snapshot-{}.sock", std::process::id());
+        let path = format!("/tmp/plop-dns-snapshot-{}.sock", std::process::id());
         let listener = tokio::net::UnixListener::bind(&path).unwrap();
         let fixture = include_str!("../tests/fixtures/running.json");
         let selected_network = fixture.replace(

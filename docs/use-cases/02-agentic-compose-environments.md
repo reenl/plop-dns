@@ -5,7 +5,7 @@ bug in its own Git worktree. Each worktree needs a running environment for tests
 browser checks, and manual review. Assigning a different host port to every copy
 adds configuration that has little to do with the bug being fixed.
 
-Use a different Compose project name for each worktree. docker-dns gives each
+Use a different Compose project name for each worktree. plop-dns gives each
 environment its own names while every service keeps the same internal port.
 
 ## Create the worktrees

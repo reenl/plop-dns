@@ -16,7 +16,7 @@ Unit tests live in the test-only module at the bottom of `src/main.rs`.
 systemctl. It checks inactive Docker stays asleep, idle Docker is not polled,
 queued events share a refresh, and a broken event stream recovers. Real Docker
 is never queried by the tests. The process test requires `127.0.0.1:5354` to be
-free; stop an installed docker-dns instance before running it.
+free; stop an installed plop-dns instance before running it.
 
 ## Releases
 
