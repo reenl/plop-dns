@@ -158,8 +158,9 @@ application, or place the frontend and API behind one HTTP proxy and origin.
 
 Give every worktree a distinct Compose project name. Reusing `-p myproject`
 means Compose operates on the same project instead of creating separate copies.
-Also remove shared global `dns` aliases if each environment should be distinct.
-Use the automatic project-qualified names shown in
+Use automatic project-qualified names or include the project name in custom
+aliases: `dns: "app.${COMPOSE_PROJECT_NAME}.docker"`. See
+[project-scoped aliases](examples/03-project-scoped-aliases.md) and
 [agentic Compose environments](use-cases/02-agentic-compose-environments.md).
 
 ## Why do lookups outside .docker fail when querying the daemon directly?

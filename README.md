@@ -217,6 +217,8 @@ Replace the example name with your running service and project.
   for a container's DNS records.
 - [Network priority](docs/examples/02-network-priority.md): prefer shared networks
   and deprioritize others.
+- [Project-scoped aliases](docs/examples/03-project-scoped-aliases.md): give repeated
+  applications distinct custom names using `${COMPOSE_PROJECT_NAME}`.
 - [Troubleshooting](docs/troubleshooting.md): check aliases, DNS forwarding,
   networks, and connectivity.
 
