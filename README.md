@@ -238,11 +238,11 @@ The listener is fixed at `127.0.0.1:5354`, and the zone is `.docker`. The daemon
 answers only for this zone; resolved handles ordinary DNS through existing
 upstreams. There is no upstream resolver or forwarding in plop-dns.
 
-Repository configuration paths mirror their destinations under `/etc`:
+`scripts/install.sh` embeds the systemd configuration and installs it at:
 
 ```text
-systemd/system/plop-dns.service
-systemd/dns-delegate.d/30-docker-domains.dns-delegate
+/etc/systemd/system/plop-dns.service
+/etc/systemd/dns-delegate.d/30-docker-domains.dns-delegate
 ```
 
 The delegation sets `DefaultRoute=no`, so unrelated lookups do not go to this

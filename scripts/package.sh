@@ -20,8 +20,19 @@ trap 'rm -rf -- "$staging"' EXIT
 mkdir -p "$staging/$name/scripts" target/dist
 install -m 755 "$binary" "$staging/$name/plop-dns"
 install -m 755 scripts/install.sh scripts/uninstall.sh "$staging/$name/scripts/"
-cp -R systemd "$staging/$name/"
-cp -R docs "$staging/$name/"
-cp README.md CONTRIBUTING.md LICENSE "$staging/$name/"
+cp LICENSE "$staging/$name/"
+cargo about generate --locked --fail --target "$target" \
+  -o "$staging/$name/THIRD-PARTY-LICENSES.txt" about.hbs
+# Preserve separate attribution notices alongside the generated license texts.
+cargo metadata --locked --format-version 1 --filter-platform "$target" > "$staging/metadata.json"
+jq -r '.packages[] | select(.source != null) | .manifest_path' "$staging/metadata.json" > "$staging/manifests"
+while IFS= read -r manifest; do
+  directory=$(dirname -- "$manifest")
+  find "$directory" -type f \( -iname 'NOTICE*' -o -iname 'COPYRIGHT*' \) -print > "$staging/notices"
+  while IFS= read -r notice; do
+    printf '\n=== %s / %s ===\n\n' "$(basename -- "$directory")" "${notice#"$directory"/}"
+    cat -- "$notice"
+  done < "$staging/notices"
+done < "$staging/manifests" >> "$staging/$name/THIRD-PARTY-LICENSES.txt"
 tar -czf "target/dist/$name.tar.gz" -C "$staging" "$name"
 echo "target/dist/$name.tar.gz"

@@ -1,4 +1,0 @@
-[Delegate]
-DNS=127.0.0.1:5354
-Domains=~docker
-DefaultRoute=no

@@ -33,8 +33,9 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools jq
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy --target "$TARGET"
+          cargo +stable install cargo-about --version 0.9.2 --locked --features cli
       - name: Check release version
         if: startsWith(github.ref, 'refs/tags/')
         run: |

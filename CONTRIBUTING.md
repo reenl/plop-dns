@@ -40,6 +40,7 @@ workflow; it uses GitHub's repository token.
 To package an already built static binary locally:
 
 ```bash
+cargo install cargo-about --version 0.9.2 --locked --features cli
 cargo build --release --locked --target x86_64-unknown-linux-musl
 ./scripts/package.sh
 ```
@@ -48,3 +49,15 @@ This requires the target's Rust standard library and a suitable musl linker.
 Packaging defaults to the current machine's architecture (`uname -m`), or accepts
 `x86_64` or `aarch64` as an argument. Archives are written under `target/dist/`. The ARM64 target is
 `aarch64-unknown-linux-musl`; package it with `./scripts/package.sh aarch64`.
+Each architecture's archive contains only its binary, `scripts/install.sh`,
+`scripts/uninstall.sh`, `LICENSE`, and `THIRD-PARTY-LICENSES.txt`. The installer
+embeds the systemd service and DNS delegation configuration. Documentation stays
+in the repository.
+
+Packaging also requires `jq`. Each archive includes `THIRD-PARTY-LICENSES.txt`,
+generated from the locked dependency graph for its target, with separate
+copyright and NOTICE files retained. `about.toml` accepts MIT, Apache-2.0, and
+Unicode-3.0; a dependency with unmet license requirements fails packaging.
+Review this policy and the generated document when updating dependencies.
+The generated document is included in release archives under ignored `target/`;
+only the license policy and template are committed.
