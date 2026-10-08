@@ -38,6 +38,7 @@ struct Entry {
     service: String,
     number: String,
     alias: Option<String>,
+    global_alias: Option<String>,
     default: bool,
     addresses: Vec<IpAddr>,
 }
@@ -82,15 +83,32 @@ fn build_records(entries: Vec<Entry>) -> HashMap<String, Vec<IpAddr>> {
         if entry.default {
             names.push(format!("{}.{}.", entry.project, ZONE).to_ascii_lowercase());
         }
-        if let Some(alias) = entry.alias {
-            let mut alias = alias.trim().trim_end_matches('.').to_ascii_lowercase();
-            if alias != ZONE && !alias.ends_with(&format!(".{ZONE}")) {
+        for (label, alias, scoped) in [
+            ("dns", entry.alias, true),
+            ("dns.global", entry.global_alias, false),
+        ] {
+            for alias in alias.iter().flat_map(|value| value.split(',')) {
+                if alias.trim().is_empty() {
+                    continue;
+                }
+                let mut alias = alias.trim().trim_end_matches('.').to_ascii_lowercase();
+                if let Some(base) = alias.strip_suffix(&format!(".{ZONE}")) {
+                    alias = base.to_owned();
+                }
+                let project = entry.project.to_ascii_lowercase();
+                if scoped && alias != project && !alias.ends_with(&format!(".{project}")) {
+                    alias.push_str(&format!(".{project}"));
+                }
                 alias.push_str(&format!(".{ZONE}"));
-            }
-            if alias.split('.').all(valid_label) && Name::from_ascii(&alias).is_ok() {
-                names.push(format!("{alias}."));
-            } else {
-                eprintln!("Ignoring invalid dns label: {alias}");
+                if alias
+                    .split('.')
+                    .all(|label| label == "*" || valid_label(label))
+                    && Name::from_ascii(&alias).is_ok()
+                {
+                    names.push(format!("{alias}."));
+                } else {
+                    eprintln!("Ignoring invalid {label} label: {alias}");
+                }
             }
         }
         for name in names {
@@ -183,6 +201,7 @@ async fn refresh(docker: &Docker, server: &Server) -> Result<()> {
             service: service.clone(),
             number: number.clone(),
             alias: labels.get("dns").cloned(),
+            global_alias: labels.get("dns.global").cloned(),
             default: labels
                 .get("dns.default")
                 .is_some_and(|value| value.eq_ignore_ascii_case("true")),
@@ -311,6 +330,37 @@ fn response_base(query: &Message) -> Message {
     response.add_queries(query.queries().iter().cloned());
     response
 }
+fn lookup_records<'a>(
+    records: &'a HashMap<String, Vec<IpAddr>>,
+    name: &str,
+) -> Option<(&'a String, &'a Vec<IpAddr>)> {
+    if let Some(record) = records.get_key_value(name) {
+        return Some(record);
+    }
+    let labels: Vec<_> = name.trim_end_matches('.').split('.').collect();
+    records
+        .iter()
+        .filter(|(pattern, _)| {
+            let parts: Vec<_> = pattern.trim_end_matches('.').split('.').collect();
+            parts.len() == labels.len()
+                && parts
+                    .iter()
+                    .zip(&labels)
+                    .all(|(part, label)| !label.is_empty() && (*part == "*" || part == label))
+        })
+        // Prefer fewer wildcards, then literal labels nearest the zone.
+        .max_by_key(|(pattern, _)| {
+            (
+                std::cmp::Reverse(pattern.split('.').filter(|part| *part == "*").count()),
+                pattern
+                    .rsplit('.')
+                    .map(|part| part != "*")
+                    .collect::<Vec<_>>(),
+                *pattern,
+            )
+        })
+}
+
 fn local_response(query: &Message, snapshot: &Snapshot, rotation: usize) -> Message {
     let mut response = response_base(query);
     response.set_authoritative(true);
@@ -320,7 +370,7 @@ fn local_response(query: &Message, snapshot: &Snapshot, rotation: usize) -> Mess
     }
     let question = &query.queries()[0];
     let key = question.name().to_ascii().to_ascii_lowercase();
-    if let Some(addresses) = snapshot.records.get(&key) {
+    if let Some((_, addresses)) = lookup_records(&snapshot.records, &key) {
         let mut answers: Vec<_> = addresses
             .iter()
             .filter_map(|ip| match (question.query_type(), ip) {
@@ -372,8 +422,8 @@ impl Server {
         } else if is_local(query.queries()[0].name()) {
             let snapshot = self.snapshot.read().await;
             let name = query.queries()[0].name().to_ascii().to_ascii_lowercase();
-            if snapshot.records.contains_key(&name) {
-                let key = (name, query.queries()[0].query_type());
+            if let Some((pattern, _)) = lookup_records(&snapshot.records, &name) {
+                let key = (pattern.clone(), query.queries()[0].query_type());
                 let mut rotations = self.rotation.lock().await;
                 let cursor = rotations.entry(key).or_default();
                 response = local_response(&query, &snapshot, *cursor);
@@ -475,6 +525,7 @@ mod tests {
             service: "web".into(),
             number: number.into(),
             alias: None,
+            global_alias: None,
             default: false,
             addresses: vec![ip.parse().unwrap()],
         }
@@ -666,7 +717,7 @@ mod tests {
         {
             let snapshot = server.snapshot.read().await;
             assert!(snapshot.ready);
-            assert_eq!(snapshot.records.len(), 8);
+            assert_eq!(snapshot.records.len(), 10);
             assert_eq!(snapshot.records["web.demo01.docker."].len(), 3);
             assert_eq!(
                 snapshot.records["web-1.demo01.docker."],
@@ -675,7 +726,8 @@ mod tests {
             assert!(snapshot.records.contains_key("web-3.demo01.docker."));
             assert!(!snapshot.records.contains_key("web-2.demo01.docker."));
             assert!(snapshot.records.contains_key("web.demo02.docker."));
-            assert_eq!(snapshot.records["special.docker."].len(), 2);
+            assert_eq!(snapshot.records["special.demo01.docker."].len(), 1);
+            assert_eq!(snapshot.records["shared.docker."].len(), 2);
             assert_eq!(
                 snapshot.records["demo01.docker."],
                 vec!["172.30.53.10".parse::<IpAddr>().unwrap()]
@@ -709,8 +761,9 @@ mod tests {
             assert_eq!(snapshot.records["web-1.demo01.docker."], selected);
             assert_eq!(snapshot.records["demo01.docker."], selected);
             assert!(snapshot.records["web.demo01.docker."].contains(&selected[0]));
-            assert!(snapshot.records["special.docker."].contains(&selected[1]));
-            assert!(!snapshot.records["special.docker."].contains(&"172.30.53.10".parse().unwrap()));
+            assert!(snapshot.records["special.demo01.docker."].contains(&selected[1]));
+            assert!(!snapshot.records["special.demo01.docker."]
+                .contains(&"172.30.53.10".parse().unwrap()));
         }
         refresh(&docker, &server).await.unwrap();
         {
@@ -718,7 +771,9 @@ mod tests {
             assert!(!snapshot.records.contains_key("web-1.demo01.docker."));
             assert!(snapshot.records["demo01.docker."].is_empty());
             assert_eq!(snapshot.records["web.demo01.docker."].len(), 2);
-            assert_eq!(snapshot.records["special.docker."].len(), 1);
+            assert!(!snapshot.records.contains_key("special.demo01.docker."));
+            assert_eq!(snapshot.records["special.demo02.docker."].len(), 1);
+            assert_eq!(snapshot.records["shared.docker."].len(), 1);
         }
         refresh(&docker, &server).await.unwrap();
         assert!(server.snapshot.read().await.records.is_empty());
@@ -751,13 +806,161 @@ mod tests {
             }),
             rotation: Mutex::new(HashMap::new()),
         };
-        for name in ["special.docker.", "demo01.docker."] {
+        for name in ["special.demo01.docker.", "demo01.docker."] {
             let wire = query(name, RecordType::A).to_vec().unwrap();
             let first = Message::from_vec(&server.answer(&wire, false).await.unwrap()).unwrap();
             let second = Message::from_vec(&server.answer(&wire, false).await.unwrap()).unwrap();
             assert_eq!(first.answers().len(), 2);
             assert_ne!(first.answers()[0].data(), second.answers()[0].data());
             assert!(first.answers().iter().all(|record| record.ttl() == 0));
+        }
+    }
+
+    #[test]
+    fn aliases_are_scoped_once_and_globals_are_shared_across_projects() {
+        for alias in [
+            "special",
+            "special.docker",
+            "special.demo01",
+            "special.demo01.docker",
+            " SPECIAL.DEMO01.DOCKER. ",
+        ] {
+            let mut first = entry("1", "172.30.53.10");
+            first.alias = Some(alias.into());
+            first.global_alias = Some("shared".into());
+            let mut second = entry("1", "172.30.53.11");
+            second.project = "demo02".into();
+            second.alias = Some("special".into());
+            second.global_alias = Some(" SHARED.DOCKER. ".into());
+            let records = build_records(vec![first, second]);
+            assert_eq!(records.len(), 9);
+            assert_eq!(
+                records["special.demo01.docker."],
+                vec!["172.30.53.10".parse::<IpAddr>().unwrap()]
+            );
+            assert_eq!(
+                records["special.demo02.docker."],
+                vec!["172.30.53.11".parse::<IpAddr>().unwrap()]
+            );
+            assert_eq!(records["shared.docker."].len(), 2);
+        }
+    }
+
+    #[tokio::test]
+    async fn wildcard_aliases_match_each_label_and_rotate_answers() {
+        for scoped in [false, true] {
+            for (pattern, prefix) in [("*.x", "a.x"), ("*.*.y", "a.b.y")] {
+                let suffix = if scoped { "demo01.docker." } else { "docker." };
+                let mut first = entry("1", "172.30.53.10");
+                if scoped {
+                    first.alias = Some(format!("{pattern}.demo01.docker"));
+                } else {
+                    first.global_alias = Some(format!("{pattern}.docker"));
+                }
+                first.addresses.push("fd00::1".parse().unwrap());
+                let mut second = entry("2", "172.30.53.11");
+                if scoped {
+                    second.alias = Some(pattern.into());
+                } else {
+                    second.global_alias = Some(pattern.into());
+                }
+                let server = Server {
+                    snapshot: RwLock::new(Snapshot {
+                        ready: true,
+                        records: build_records(vec![first, second]),
+                    }),
+                    rotation: Mutex::new(HashMap::new()),
+                };
+                let name = format!("{prefix}.{suffix}");
+                let wire = query(&name.to_ascii_uppercase(), RecordType::A)
+                    .to_vec()
+                    .unwrap();
+                let first = Message::from_vec(&server.answer(&wire, false).await.unwrap()).unwrap();
+                let second = Message::from_vec(&server.answer(&wire, true).await.unwrap()).unwrap();
+                assert_eq!(first.answers().len(), 2);
+                assert_ne!(first.answers()[0].data(), second.answers()[0].data());
+                assert!(first
+                    .answers()
+                    .iter()
+                    .all(|record| record.name().to_ascii().eq_ignore_ascii_case(&name)));
+                let snapshot = server.snapshot.read().await;
+                assert_eq!(
+                    local_response(&query(&name, RecordType::AAAA), &snapshot, 0)
+                        .answers()
+                        .len(),
+                    1
+                );
+                for prefix in ["x", "a.b.x", "a.y", "a.b.c.y"] {
+                    assert_eq!(
+                        local_response(
+                            &query(&format!("{prefix}.{suffix}"), RecordType::A),
+                            &snapshot,
+                            0
+                        )
+                        .response_code(),
+                        ResponseCode::NXDomain
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn exact_records_and_more_specific_wildcards_take_precedence() {
+        let mut broad = entry("1", "172.30.53.10");
+        broad.global_alias = Some("*.*.y".into());
+        let mut specific = entry("2", "172.30.53.11");
+        specific.global_alias = Some("*.b.y".into());
+        let mut exact = entry("3", "172.30.53.12");
+        exact.global_alias = Some("a.b.y".into());
+        let records = build_records(vec![broad, specific, exact]);
+        for (name, ip) in [
+            ("a.b.y.docker.", "172.30.53.12"),
+            ("c.b.y.docker.", "172.30.53.11"),
+            ("c.d.y.docker.", "172.30.53.10"),
+        ] {
+            assert_eq!(
+                lookup_records(&records, name).unwrap().1,
+                &vec![ip.parse::<IpAddr>().unwrap()]
+            );
+        }
+        for invalid in ["a*", "**.x", "*.bad name"] {
+            let mut container = entry("1", "172.30.53.10");
+            container.alias = Some(invalid.into());
+            container.global_alias = Some(invalid.into());
+            assert_eq!(build_records(vec![container]).len(), 3);
+        }
+    }
+
+    #[test]
+    fn alias_lists_support_exact_wildcard_and_qualified_names() {
+        let mut container = entry("1", "172.30.53.10");
+        container.alias = Some("x, *.x, *.*.y, X.demo01.docker., z.demo01, bad name, ,".into());
+        container.global_alias = Some("shared, *.shared, *.*.global, SHARED.DOCKER., a*, ,".into());
+        let snapshot = Snapshot {
+            ready: true,
+            records: build_records(vec![container]),
+        };
+        assert_eq!(snapshot.records.len(), 10);
+        for name in [
+            "x.demo01.docker.",
+            "a.x.demo01.docker.",
+            "a.b.y.demo01.docker.",
+            "z.demo01.docker.",
+            "shared.docker.",
+            "a.shared.docker.",
+            "a.b.global.docker.",
+            "web.demo01.docker.",
+        ] {
+            let response = local_response(&query(name, RecordType::A), &snapshot, 0);
+            assert_eq!(response.response_code(), ResponseCode::NoError);
+            assert_eq!(response.answers().len(), 1, "{name}");
+        }
+        for name in ["x.docker.", "a.b.x.demo01.docker.", "shared.demo01.docker."] {
+            assert_eq!(
+                local_response(&query(name, RecordType::A), &snapshot, 0).response_code(),
+                ResponseCode::NXDomain
+            );
         }
     }
 
@@ -770,6 +973,6 @@ mod tests {
         assert!(records.contains_key("web.demo01.docker."));
         let mut container = entry("1", "172.30.53.10");
         container.alias = Some("special.notdocker".into());
-        assert!(build_records(vec![container]).contains_key("special.notdocker.docker."));
+        assert!(build_records(vec![container]).contains_key("special.notdocker.demo01.docker."));
     }
 }

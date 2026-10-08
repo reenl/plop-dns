@@ -28,8 +28,8 @@ To release, set the version in `Cargo.toml`, update `Cargo.lock` with `cargo che
 commit the changes, and push the matching tag:
 
 ```bash
-git tag 0.1.0
-git push origin 0.1.0
+git tag 0.2.0
+git push origin 0.2.0
 ```
 
 Only tags matching the package version create a draft GitHub release. After both

@@ -9,7 +9,8 @@ Docker CLI commands can activate an otherwise sleeping Docker daemon.
 When several containers register the same name, plop-dns combines their
 addresses and rotates the first answer between queries. This can happen when:
 
-- Several containers have the same `dns` alias, even in different projects.
+- Several containers have the same `dns` alias within one project, or the same
+  `dns.global` alias across projects.
 - Several services in the same project have `dns.default: "true"`.
 - A Compose service has several running replicas.
 
@@ -17,7 +18,7 @@ Inspect the labels of running services in the project:
 
 ```bash
 docker ps --filter label=com.docker.compose.project=myproject \
-  --format '{{.Names}} dns={{.Label "dns"}} default={{.Label "dns.default"}}'
+  --format '{{.Names}} dns={{.Label "dns"}} global={{.Label "dns.global"}} default={{.Label "dns.default"}}'
 ```
 
 Use distinct aliases if the services should be separate. Mark only the intended
@@ -158,8 +159,8 @@ application, or place the frontend and API behind one HTTP proxy and origin.
 
 Give every worktree a distinct Compose project name. Reusing `-p myproject`
 means Compose operates on the same project instead of creating separate copies.
-Use automatic project-qualified names or include the project name in custom
-aliases: `dns: "app.${COMPOSE_PROJECT_NAME}.docker"`. See
+Use automatic project-qualified names or a scoped custom alias: `dns: app`.
+Reserve `dns.global` for names intentionally shared across projects. See
 [project-scoped aliases](examples/03-project-scoped-aliases.md) and
 [agentic Compose environments](use-cases/02-agentic-compose-environments.md).
 

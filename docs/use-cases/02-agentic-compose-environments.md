@@ -66,10 +66,10 @@ name comes from the directory, but explicit `-p` names make the association clea
 
 Let Compose scope containers, networks, and volumes by project. Avoid fixed
 `container_name` values or globally named volumes for state that should be
-independent. A global alias such as `dns: app.docker` on every worktree would
+independent. A global alias such as `dns.global: app` on every worktree would
 combine their addresses and round robin between environments. Use the automatic
 project-qualified names, or scope a custom alias with
-`dns: "app.${COMPOSE_PROJECT_NAME}.docker"`. See the
+`dns: app`. See the
 [project-scoped alias example](../examples/03-project-scoped-aliases.md) for a
 Compose file that can run in multiple environments.
 

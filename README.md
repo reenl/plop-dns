@@ -57,12 +57,12 @@ GitHub Releases page. No Rust installation is needed. For example, on x86_64:
 
 ```bash
 sha256sum --ignore-missing --check SHA256SUMS
-tar -xzf plop-dns-0.1.0-linux-x86_64.tar.gz
-cd plop-dns-0.1.0-linux-x86_64
+tar -xzf plop-dns-0.2.0-linux-x86_64.tar.gz
+cd plop-dns-0.2.0-linux-x86_64
 ./install.sh
 ```
 
-On ARM64, use `plop-dns-0.1.0-linux-aarch64.tar.gz`. Keep the extracted directory
+On ARM64, use `plop-dns-0.2.0-linux-aarch64.tar.gz`. Keep the extracted directory
 to run uninstall later. To upgrade, extract the new release and run its installer.
 Installation leaves inactive Docker asleep; DNS starts when Docker starts normally.
 
@@ -153,16 +153,40 @@ Add labels under an existing Compose service:
 services:
   web:
     labels:
-      dns: special.docker
+      dns: special
+      dns.global: shared
       dns.default: "true"
       dns.network: workspace-services
 ```
 
-| Label         | Effect                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `dns`         | Adds an alias alongside the automatic names. `special` and `special.docker` both register `special.docker`.        |
-| `dns.default` | With `"true"`, also registers the service at `<project>.docker`. Quote the boolean value.                          |
-| `dns.network` | Uses addresses from this attached Docker network for all of the container's records. Overrides network priorities. |
+| Label         | Effect                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `dns`         | Adds an alias alongside the automatic names. `special` and `special.docker` both register `special.<project>.docker`. |
+| `dns.global`  | Adds a global alias: `shared` and `shared.docker` both register `shared.docker`, shared across projects.              |
+| `dns.default` | With `"true"`, also registers the service at `<project>.docker`. Quote the boolean value.                             |
+| `dns.network` | Uses addresses from this attached Docker network for all of the container's records. Overrides network priorities.    |
+
+Aliases already ending in the current project name, such as
+`dns: "special.${COMPOSE_PROJECT_NAME}"` or
+`dns: "special.${COMPOSE_PROJECT_NAME}.docker"`, keep that project suffix once.
+Both `dns` and `dns.global` can be set on the same service. These are container
+labels under `labels:`, separate from Compose’s service-level `dns:` setting.
+To keep an existing unscoped alias, move it from `dns` to `dns.global`.
+
+Both labels also accept comma-separated lists, mixing exact and wildcard aliases:
+
+```yaml
+labels:
+  dns: "x,*.x"
+  dns.global: "y,*.y,*.*.y"
+```
+
+In project `myproject`, `dns: "x,*.x"` registers `x.myproject.docker` and
+matches names such as `a.x.myproject.docker`. The global list registers
+`y.docker` and matches `a.y.docker` and `a.b.y.docker`. Spaces around items
+are trimmed, empty items are ignored, and duplicate aliases do not duplicate
+addresses. Invalid items are logged and skipped while valid items still work.
+Project and `.docker` suffixes are handled separately for each item.
 
 For `dns.network`, use the actual Docker network name; Compose may prefix it with
 the project name. If that network is not attached, the container is skipped and
@@ -171,6 +195,30 @@ the reason is logged.
 Multiple containers can register the same alias or project name. Their addresses
 are combined, duplicates removed, and the first returned address rotates between
 queries.
+
+### Wildcard aliases
+
+Both alias labels accept `*` as a complete DNS label. Each `*` matches exactly
+one nonempty label; quote wildcard values in YAML:
+
+```yaml
+labels:
+  dns: "*.x"
+  dns.global: "*.*.y"
+```
+
+In project `myproject`, these match `a.x.myproject.docker` and
+`a.b.y.docker`, respectively. `dns: "*.*.y"` would instead match
+`a.b.y.myproject.docker`; `dns.global: "*.x"` would match `a.x.docker`.
+The optional `.docker` suffix and existing project suffix work as for ordinary
+aliases. Partial wildcards such as `app*` are invalid.
+
+Exact registered names take precedence, including names with no addresses.
+Otherwise, the matching pattern with the fewest wildcards wins; ties prefer
+literal labels closest to `.docker`. Containers registering the same pattern
+combine their addresses and round robin. Answers use the requested hostname.
+A wildcard does not match its base name or extra levels: `*.x` matches `a.x`
+but not `x` or `a.b.x` (before the project and zone suffixes).
 
 ### Network labels
 

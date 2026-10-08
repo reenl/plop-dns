@@ -14,7 +14,7 @@ services:
       - frontend
       - backend
     labels:
-      dns: binding-web.docker
+      dns: binding-web
       dns.default: "true"
       dns.network: binding-frontend
 
@@ -44,7 +44,7 @@ All of `web`'s names use its `binding-frontend` address:
 ```text
 web.binding.docker
 web-1.binding.docker
-binding-web.docker
+binding-web.binding.docker
 binding.docker
 ```
 

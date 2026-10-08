@@ -1,8 +1,8 @@
 # Project-scoped custom aliases
 
-When the same application runs in several Compose projects, include the project
-name in its custom alias. Otherwise, a shared alias such as `app.docker` combines
-the addresses from every environment and round robins between them.
+The `dns` label automatically scopes a custom alias to its Compose project.
+The same alias can be used in multiple environments without combining their
+addresses. Use `dns.global` when a name should be shared across projects.
 
 Save this as `compose.yaml`:
 
@@ -11,12 +11,8 @@ services:
   web:
     image: nginx:alpine
     labels:
-      dns: "app.${COMPOSE_PROJECT_NAME}.docker"
+      dns: app
 ```
-
-Compose interpolates `${COMPOSE_PROJECT_NAME}` using the selected project name,
-including one supplied with `-p`. See Docker's
-[project-name documentation](https://docs.docker.com/reference/compose-file/version-and-name/).
 
 Start two copies of the same application:
 
@@ -41,9 +37,40 @@ Both containers listen on port 80 without publishing a host port. The default
 Compose networks use the bridge driver; follow the [installation guide](../../README.md#install)
 to configure host and container DNS.
 
-You can omit `.docker` from the label: `dns: "app.${COMPOSE_PROJECT_NAME}"`
-registers the same alias because plop-dns appends the zone. Use project names
-without dots or underscores, such as `fix-42`.
+`dns: app.docker` also registers `app.<project>.docker`. Existing explicitly
+qualified labels, `dns: "app.${COMPOSE_PROJECT_NAME}"` and
+`dns: "app.${COMPOSE_PROJECT_NAME}.docker"`, still work: the current project
+suffix is added only if it is missing. Use project names without dots or
+underscores, such as `fix-42`.
+
+For a shared name, add `dns.global: app` (or `dns.global: app.docker`). This
+registers `app.docker`; containers in different projects using that global alias
+combine their addresses and round robin. Both labels may be set together.
 
 Replicas within one project still share its alias and round robin. To address a
 specific replica, use its automatic name, such as `web-1.fix-42.docker`.
+
+## Wildcard aliases
+
+For names one level below an alias, use `dns: "*.x"`. In project `fix-42`,
+this resolves `tenant.x.fix-42.docker`. For two levels, use `dns: "*.*.y"`,
+which resolves `tenant.region.y.fix-42.docker`.
+
+The global equivalents are `dns.global: "*.x"` for `tenant.x.docker` and
+`dns.global: "*.*.y"` for `tenant.region.y.docker`. Always quote values
+containing `*` in YAML. Each wildcard matches exactly one label; exact names
+and more specific patterns take precedence. See
+[wildcard aliases](../../README.md#wildcard-aliases) for matching rules.
+
+To register both a base name and its wildcard, use a comma-separated list:
+
+```yaml
+labels:
+  dns: "x,*.x"
+  dns.global: "y,*.y,*.*.y"
+```
+
+In project `fix-42`, the scoped list serves `x.fix-42.docker` and
+`tenant.x.fix-42.docker`. The global list serves `y.docker`, `tenant.y.docker`,
+and `tenant.region.y.docker`. Each item follows the same suffix and matching
+rules as a single alias.

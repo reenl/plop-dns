@@ -6,6 +6,7 @@
       "com.docker.compose.service": "web",
       "com.docker.compose.container-number": "1",
       "dns": "special.docker",
+      "dns.global": "shared",
       "dns.default": "TrUe"
     },
     "NetworkSettings": {
@@ -46,6 +47,7 @@
       "com.docker.compose.service": "web",
       "com.docker.compose.container-number": "1",
       "dns": "special",
+      "dns.global": "shared.docker",
       "dns.default": "false"
     },
     "NetworkSettings": {
